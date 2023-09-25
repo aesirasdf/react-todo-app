@@ -1,13 +1,16 @@
 import './App.css'
 import React from 'react'
-import { Box, Button, TextField, Card, CardContent, CardActions, Typography, Grid } from '@mui/material'
+import { Box, Button, TextField, Grid} from '@mui/material'
 import { toast } from 'react-toastify'
+import TodoUpdateDialog from './components/TodoUpdateDialog'
+import TodoCard from './components/TodoCard'
 
 class App extends React.Component{
   state = {
     showForm: false,
     todos: [],
     todo: {
+      id: null,
       title: '',
       description: ''
     }
@@ -35,16 +38,7 @@ class App extends React.Component{
 
   handleCreateClick = () => {
     if(this.state.todo.title.length === 0 || this.state.todo.description.length === 0){
-      toast.error('All fields are required!', {
-        position: "top-right",
-        autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "dark",
-      });
+      toast.error('All fields are required!');
     }
     else{
       const d = new Date()
@@ -55,10 +49,11 @@ class App extends React.Component{
         isCompleted: false,
       }
       const todos = [...this.state.todos]
-      todos.push(todo)
+      todos.unshift(todo)
       this.setState({
         todos,
         todo: {
+          id: null,
           title: '',
           description: ''
         }
@@ -94,9 +89,51 @@ class App extends React.Component{
     })
   }
 
+  handleEditClick = todo => {
+    this.setState({todo})
+  }
+
+  handleDialogClose = () => {
+    this.setState({todo: {
+      id: null,
+      title: '',
+      description: ''
+    }})
+  }
+
+  handleUpdateClick = () => {
+    const tempTodos = [...this.state.todos]
+    tempTodos.map(todo => {
+      if(todo.id.toString() === this.state.todo.id.toString()){
+        todo.title = this.state.todo.title
+        todo.description = this.state.todo.description
+      }
+      return todo
+    })
+    this.setState({todos: tempTodos})
+    this.handleDialogClose()
+  }
+  
+  componentDidMount(){
+    this.setState({todos:  JSON.parse(localStorage.getItem('todos')) ?? []})
+  }
+
+  componentDidUpdate(prevProps, prevState){
+    if(prevState.todos !== this.state.todos){
+      localStorage.setItem('todos', JSON.stringify(this.state.todos))
+    }
+  }
+
   render(){
     return(
       <Box className="App">
+        <TodoUpdateDialog 
+          todo={this.state.todo}
+          handleDialogClose={this.handleDialogClose}
+          handleTitleChange={this.handleTitleChange}
+          handleDescriptionChange={this.handleDescriptionChange}
+          handleUpdateClick={this.handleUpdateClick} 
+        />
         <Box style={{textAlign: 'center', marginTop: '5rem'}}>
           <Button onClick={this.toggleShowForm} variant="contained" color="primary">
             { this.state.showForm ? "Hide" : "Show" } Form
@@ -126,24 +163,12 @@ class App extends React.Component{
                   {
                     this.state.todos.map((todo) => (
                       <Grid item key={todo.id} sx={{maxWidth: '300px', p:2}}>
-                        <Card sx={{ minWidth: 275, m: 2, pb: 5 , position: 'relative' }}>
-                          <CardContent>
-                            <Typography sx={{ fontSize: 14 }} color="text.secondary" gutterBottom>
-                              {todo.id}
-                            </Typography>
-                            <Typography variant="h5" component="div">
-                              {todo.title}
-                            </Typography>
-                            <Typography variant="body2">
-                              {todo.description}
-                            </Typography>
-                          </CardContent>
-                          <CardActions sx={{justifyContent: 'space-around', position: 'absolute', bottom: 0, display: 'flex', width: '250px'}}>
-                            <Button onClick={() => this.handleDeleteClick(todo.id)} color="error" size="small">DELETE</Button>
-                            <Button color="warning" size="small">EDIT</Button>
-                            <Button onClick={() => this.handleToggleCompleted(todo.id)} color={todo.isCompleted ? "success" : "secondary"} size="small">{todo.isCompleted ? "Completed" : "Incomplete"}</Button>
-                          </CardActions>
-                        </Card>
+                        <TodoCard 
+                          todo={todo} 
+                          handleDeleteClick={this.handleDeleteClick}
+                          handleEditClick={this.handleEditClick}
+                          handleToggleCompleted={this.handleToggleCompleted}
+                        />
                       </Grid>
                     ))
                   }
@@ -155,5 +180,4 @@ class App extends React.Component{
     )
   }
 }
-
 export default App;
